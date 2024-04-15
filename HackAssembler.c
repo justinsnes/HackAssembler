@@ -4,13 +4,7 @@
 
 #include <string.h>
 
-typedef struct {
-
-} thestruct;
-
-typedef union {
-
-} theunion;
+char *str_replace(char *orig, char *rep, char *with);
 
 int main(int argc, char **argv)
 {
@@ -29,13 +23,15 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    char *fphack_filename = filename;
-    FILE *fphack = fopen("", "w");
+    char *fphack_filename = str_replace(filename, ".asm", ".hack");
+    FILE *fphack = fopen(fphack_filename, "w");
     while((read = getline(&line, &len, fpasm)) != -1)
     {
-        if (line == '\r')
+        // ignore comments and white space
+        if (*line == '\r' || *line == '/')
             continue;
-        printf("%s", line);
+        fprintf(fphack, "%s", line);
+        //printf("%s", line);
         //printf("%d\n", *line);
     }
 
