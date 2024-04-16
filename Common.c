@@ -1,46 +1,7 @@
-#define _GNU_SOURCE
-#include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 
-#include <string.h>
-
-char *str_replace(char *orig, char *rep, char *with);
-
-int main(int argc, char **argv)
-{
-    char *filename = argv[1];
-    printf("File name: %s\n", filename);
-
-    char *line = NULL;
-    // use size_t instead of int for arbitrary object/string sizes
-    size_t len = 0;
-    ssize_t read;
-
-    FILE *fpasm = fopen(filename, "r");
-    if (fpasm == NULL)
-    {
-        printf("File not found.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    char *fphack_filename = str_replace(filename, ".asm", ".hack");
-    FILE *fphack = fopen(fphack_filename, "w");
-    while((read = getline(&line, &len, fpasm)) != -1)
-    {
-        // ignore comments and white space
-        if (*line == '\r' || *line == '/')
-            continue;
-        fprintf(fphack, "%s", line);
-        //printf("%s", line);
-        //printf("%d\n", *line);
-    }
-
-    fclose(fpasm);
-    if (line)
-        free(line);
-
-    exit(EXIT_SUCCESS);
-}
+#include "Common.h"
 
 // copied from Stack Overflow - jmucchiello (https://stackoverflow.com/questions/779875/what-function-is-to-replace-a-substring-from-a-string-in-c)
 // You must free the result if result is non-NULL.
