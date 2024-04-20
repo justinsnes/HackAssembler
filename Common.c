@@ -51,3 +51,40 @@ char *str_replace(char *orig, char *rep, char *with) {
     strcpy(tmp, orig);
     return result;
 }
+
+char *getCharsBetween(char *charsValue, char *before, char *after) {
+    char *start = strstr(charsValue, before);
+    if (start == 0x0) {
+        start = strstr(charsValue, "");
+    } else { 
+        start += strlen(before);
+    }
+    
+    char *end = strstr(start, after);
+    if (end == 0x0) {
+        end = &start[strlen(start)]; //strstr(start, "\0");
+        //end - 1; // we add the null terminator back in later anyway.
+    }
+    char *retval = (char*)malloc(end - start + 1);
+    memcpy(retval, start, end - start);
+    retval[end - start] = '\0';
+    return retval;
+}
+
+// Free the result after use.
+char *toBinaryString(int n, int num_bits) {
+    char *string = malloc(num_bits + 1);
+    if (!string) {
+        return NULL;
+    }
+
+    for (int i = num_bits - 1; i >= 0; i--) {
+        // grab LSB with (n & 1) and add '0' to convert the bit value to string. 
+        // if bit is 1, it adds that to the ascii value which makes (48 + 1) = 1's value in ASCII
+        string[i] = (n & 1) + '0';
+        // right-shift bits to get next bit in the sequence 
+        n >>= 1;
+    }
+    string[num_bits] = '\0';
+    return string;
+}
