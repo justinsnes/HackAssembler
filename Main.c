@@ -39,7 +39,7 @@ int main(int argc, char **argv)
     int asmLabelCount = 0;
     while((read = getline(&line, &len, fpasm)) != -1)
     {
-        // remove white space
+        // remove white spaces
         char *lineNoWhitespace = str_replace(line, " ", "");
         // ignore comments and empty lines
         if (*lineNoWhitespace == '\r' || *lineNoWhitespace == '/')
