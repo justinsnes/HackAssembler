@@ -53,18 +53,32 @@ char *str_replace(char *orig, char *rep, char *with) {
 }
 
 char *getCharsBetween(char *charsValue, char *before, char *after) {
-    char *start = strstr(charsValue, before);
-    if (start == 0x0) {
-        start = strstr(charsValue, "");
-    } else { 
-        start += strlen(before);
+    char *start;
+    if (*before == 0) {
+        start = charsValue;
+    } else {
+        start = strstr(charsValue, before);
+        if (start == 0x0) {
+            // no match. go to end of string
+            start = charsValue + strlen(charsValue);
+        } else { 
+            start += strlen(before);
+        }
     }
     
-    char *end = strstr(start, after);
-    if (end == 0x0) {
-        end = &start[strlen(start)]; //strstr(start, "\0");
-        //end - 1; // we add the null terminator back in later anyway.
+    char *end;
+    if (*after == 0) {
+        end = start + strlen(start);
+    } else {
+        end = strstr(start, after);
+        if (end == 0x0 && *before == 0) {
+            // no end char match and no starting point. return nothing.
+            end = start;
+        } else if (end == 0x0) {
+            end = start + strlen(start);
+        }
     }
+    
     char *retval = (char*)malloc(end - start + 1);
     memcpy(retval, start, end - start);
     retval[end - start] = '\0';
