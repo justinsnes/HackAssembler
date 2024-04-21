@@ -8,7 +8,7 @@
 
 typedef struct AsmLabel {
     char LabelName[20];
-    int LineNumber;
+    int LineAddress;
 } ASMLABEL;
 
 int main(int argc, char **argv)
@@ -34,7 +34,7 @@ int main(int argc, char **argv)
     fphack_filename = NULL;
 
     // handle label creation
-    int lineNumber = 1;
+    int lineAddress = 0;
     ASMLABEL *asmLabels = malloc(sizeof(ASMLABEL) * 20);
     int asmLabelCount = 0;
     while((read = getline(&line, &len, fpasm)) != -1)
@@ -52,18 +52,22 @@ int main(int argc, char **argv)
         {
             char *label = getCharsBetween(lineNoWhitespace, "(", ")");
             strcpy(asmLabels->LabelName, label);
-            asmLabels->LineNumber = lineNumber;
+            asmLabels->LineAddress = lineAddress;
             asmLabels++;
             asmLabelCount++;
         }
         else {
-            lineNumber++;
+            lineAddress++;
         }
     }
 
     // set the true amount of memory used for the labels
     // reset to the correct, original pointer address.
     asmLabels = asmLabels - asmLabelCount; 
+    if (asmLabelCount == 0) {
+        // need at least one record else there's nothing to reallocate/shrink to
+        asmLabelCount++;
+    }
     ASMLABEL *trueAsmLabels = realloc(asmLabels, asmLabelCount * sizeof(ASMLABEL));
     if (trueAsmLabels == NULL) {
         printf("\nMemory Allocation reallocation failed. ABORT!");
@@ -97,7 +101,7 @@ int main(int argc, char **argv)
                 ASMLABEL record = asmLabels[x];
                 if (strcmp(cleanAddress, record.LabelName) == 0)
                 {
-                    aAddr = record.LineNumber;
+                    aAddr = record.LineAddress;
                     break;
                 }
             }
