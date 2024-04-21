@@ -3,13 +3,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <stdbool.h>
+
 #include "Common.h"
 #include "InstructionLookup.h"
 
-typedef struct AsmLabel {
-    char LabelName[20];
-    int LineAddress;
-} ASMLABEL;
+typedef struct AsmSymbol {
+    char SymbolName[20];
+    int Address;
+} ASMSYMBOL;
 
 int main(int argc, char **argv)
 {
@@ -33,10 +35,21 @@ int main(int argc, char **argv)
     free (fphack_filename);
     fphack_filename = NULL;
 
-    // handle label creation
+    // handle symbol creation (labels and variables)
     int lineAddress = 0;
-    ASMLABEL *asmLabels = malloc(sizeof(ASMLABEL) * 20);
-    int asmLabelCount = 0;
+    int variableMemoryAddress = 16;
+
+    ASMSYMBOL *asmSymbols = malloc(sizeof(ASMSYMBOL) * 50);
+    // TODO: FIND A WAY TO INITIALIZE PRESET SYMBOLS FIRST.
+    //asmSymbols.SymbolName = "R0";
+    // asmSymbols = {
+    //     {"R0", 0}, {"R1", 1},  {"R2", 2},   {"R3", 3},   {"R4", 4},   {"R5", 5},         {"R6", 6},     {"R7", 7},
+    //     {"R8", 8}, {"R9", 9},  {"R10", 10}, {"R11", 11}, {"R12", 12}, {"R13", 13},       {"R14", 14},   {"R15", 15}, 
+    //     {"SP", 0}, {"LCL", 1}, {"ARG", 2},  {"THIS", 3}, {"THAT", 4}, {"SCREEN", 16384}, {"KBD", 24576}
+    // };
+    int asmSymbolCount = 0;
+    //asmSymbols = asmSymbols + 23;
+
     while((read = getline(&line, &len, fpasm)) != -1)
     {
         // remove white spaces
@@ -51,10 +64,13 @@ int main(int argc, char **argv)
         if (*lineNoWhitespace == '(')
         {
             char *label = getCharsBetween(lineNoWhitespace, "(", ")");
-            strcpy(asmLabels->LabelName, label);
-            asmLabels->LineAddress = lineAddress;
-            asmLabels++;
-            asmLabelCount++;
+            strcpy(asmSymbols->SymbolName, label);
+            asmSymbols->Address = lineAddress;
+            asmSymbols++;
+            asmSymbolCount++;
+        } else if (*lineNoWhitespace == '@') {
+
+            lineAddress++;
         }
         else {
             lineAddress++;
@@ -63,18 +79,17 @@ int main(int argc, char **argv)
 
     // set the true amount of memory used for the labels
     // reset to the correct, original pointer address.
-    asmLabels = asmLabels - asmLabelCount; 
-    if (asmLabelCount == 0) {
-        // need at least one record else there's nothing to reallocate/shrink to
-        asmLabelCount++;
-    }
-    ASMLABEL *trueAsmLabels = realloc(asmLabels, asmLabelCount * sizeof(ASMLABEL));
-    if (trueAsmLabels == NULL) {
+    asmSymbols = asmSymbols - asmSymbolCount; 
+    // TEMPORARY UNTIL ADDING IN PRESET SYMBOLS
+    if (asmSymbolCount == 0)
+        asmSymbolCount++;
+    ASMSYMBOL *trueAsmSymbols = realloc(asmSymbols, asmSymbolCount * sizeof(ASMSYMBOL));
+    if (trueAsmSymbols == NULL) {
         printf("\nMemory Allocation reallocation failed. ABORT!");
-        free (asmLabels);asmLabels = NULL;
+        free (asmSymbols);asmSymbols = NULL;
         exit(0);
     }
-    asmLabels = trueAsmLabels;
+    asmSymbols = trueAsmSymbols;
 
     rewind(fpasm);
     // convert the rest of assembly to machine code
@@ -96,17 +111,19 @@ int main(int argc, char **argv)
             unsigned int aAddr = 0;
             char *cleanAddress = str_replace(lineNoWhitespace+1, "\r\n", "");
 
-            // look for a label match
-            for (int x = 0; x < asmLabelCount; x++) {
-                ASMLABEL record = asmLabels[x];
-                if (strcmp(cleanAddress, record.LabelName) == 0)
+            // look for a symbol match
+            bool symbolFound = false;
+            for (int x = 0; x < asmSymbolCount; x++) {
+                ASMSYMBOL record = asmSymbols[x];
+                if (strcmp(cleanAddress, record.SymbolName) == 0)
                 {
-                    aAddr = record.LineAddress;
+                    aAddr = record.Address;
+                    symbolFound = true;
                     break;
                 }
             }
-            // look for a register match
-            if (aAddr == 0) {
+            
+            if (!symbolFound) {
                 char *registerTranslated = str_replace(cleanAddress, "R", "");
                 sscanf(registerTranslated, "%d", &aAddr);
                 free(registerTranslated);registerTranslated = NULL;
@@ -166,7 +183,7 @@ int main(int argc, char **argv)
         free(line);line = NULL;
     }
         
-    free(asmLabels); asmLabels = NULL;
+    free(asmSymbols); asmSymbols = NULL;
 
     exit(EXIT_SUCCESS);
 }

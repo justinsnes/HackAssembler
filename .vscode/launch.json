@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/HackAssembler",
-            "args": ["./Asm/Max.asm"],
+            "args": ["./Asm/Add.asm"],
             "cwd": "${workspaceFolder}"
         }
     ]
