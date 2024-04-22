@@ -9,7 +9,7 @@
 #include "InstructionLookup.h"
 
 typedef struct AsmSymbol {
-    char SymbolName[20];
+    char SymbolName[40];
     int Address;
 } ASMSYMBOL;
 
@@ -39,21 +39,26 @@ int main(int argc, char **argv)
     int lineAddress = 0;
     int variableMemoryAddress = 16;
 
-    ASMSYMBOL *asmSymbols = malloc(sizeof(ASMSYMBOL) * 50);
-    // TODO: FIND A WAY TO INITIALIZE PRESET SYMBOLS FIRST.
-    //asmSymbols.SymbolName = "R0";
-    // asmSymbols = {
-    //     {"R0", 0}, {"R1", 1},  {"R2", 2},   {"R3", 3},   {"R4", 4},   {"R5", 5},         {"R6", 6},     {"R7", 7},
-    //     {"R8", 8}, {"R9", 9},  {"R10", 10}, {"R11", 11}, {"R12", 12}, {"R13", 13},       {"R14", 14},   {"R15", 15}, 
-    //     {"SP", 0}, {"LCL", 1}, {"ARG", 2},  {"THIS", 3}, {"THAT", 4}, {"SCREEN", 16384}, {"KBD", 24576}
-    // };
+    ASMSYMBOL *asmSymbols = malloc(sizeof(ASMSYMBOL) * 1000);
     int asmSymbolCount = 0;
-    //asmSymbols = asmSymbols + 23;
+    ASMSYMBOL presetSymbols[23] = {
+        {"R0", 0}, {"R1", 1},  {"R2", 2},   {"R3", 3},   {"R4", 4},   {"R5", 5},         {"R6", 6},     {"R7", 7},
+        {"R8", 8}, {"R9", 9},  {"R10", 10}, {"R11", 11}, {"R12", 12}, {"R13", 13},       {"R14", 14},   {"R15", 15}, 
+        {"SP", 0}, {"LCL", 1}, {"ARG", 2},  {"THIS", 3}, {"THAT", 4}, {"SCREEN", 16384}, {"KBD", 24576}
+    };
+    for (int x = 0; x < 23; x++) {
+        strcpy(asmSymbols[x].SymbolName, presetSymbols[x].SymbolName);
+        asmSymbols[x].Address = presetSymbols[x].Address;
+        //asmSymbols++;
+        asmSymbolCount++;
+    }
 
+    // iterate to setup all labels
+    char *lineNoWhitespace;
     while((read = getline(&line, &len, fpasm)) != -1)
     {
         // remove white spaces
-        char *lineNoWhitespace = str_replace(line, " ", "");
+        lineNoWhitespace = str_replace(line, " ", "");
         // ignore comments and empty lines
         if (*lineNoWhitespace == '\r' || *lineNoWhitespace == '/')
         {
@@ -64,39 +69,20 @@ int main(int argc, char **argv)
         if (*lineNoWhitespace == '(')
         {
             char *label = getCharsBetween(lineNoWhitespace, "(", ")");
-            strcpy(asmSymbols->SymbolName, label);
-            asmSymbols->Address = lineAddress;
-            asmSymbols++;
+            strcpy(asmSymbols[asmSymbolCount].SymbolName, label);
+            asmSymbols[asmSymbolCount].Address = lineAddress;
             asmSymbolCount++;
-        } else if (*lineNoWhitespace == '@') {
-
-            lineAddress++;
-        }
-        else {
+        } else {
             lineAddress++;
         }
     }
-
-    // set the true amount of memory used for the labels
-    // reset to the correct, original pointer address.
-    asmSymbols = asmSymbols - asmSymbolCount; 
-    // TEMPORARY UNTIL ADDING IN PRESET SYMBOLS
-    if (asmSymbolCount == 0)
-        asmSymbolCount++;
-    ASMSYMBOL *trueAsmSymbols = realloc(asmSymbols, asmSymbolCount * sizeof(ASMSYMBOL));
-    if (trueAsmSymbols == NULL) {
-        printf("\nMemory Allocation reallocation failed. ABORT!");
-        free (asmSymbols);asmSymbols = NULL;
-        exit(0);
-    }
-    asmSymbols = trueAsmSymbols;
 
     rewind(fpasm);
     // convert the rest of assembly to machine code
     while((read = getline(&line, &len, fpasm)) != -1)
     {
         // remove white space
-        char *lineNoWhitespace = str_replace(line, " ", "");
+        lineNoWhitespace = str_replace(line, " ", "");
         // ignore comments, empty lines and labels we already processed.
         if (*lineNoWhitespace == '\r' || *lineNoWhitespace == '/' || *lineNoWhitespace == '(')
         {
@@ -111,22 +97,28 @@ int main(int argc, char **argv)
             unsigned int aAddr = 0;
             char *cleanAddress = str_replace(lineNoWhitespace+1, "\r\n", "");
 
-            // look for a symbol match
-            bool symbolFound = false;
-            for (int x = 0; x < asmSymbolCount; x++) {
-                ASMSYMBOL record = asmSymbols[x];
-                if (strcmp(cleanAddress, record.SymbolName) == 0)
-                {
-                    aAddr = record.Address;
-                    symbolFound = true;
-                    break;
+            sscanf(cleanAddress, "%d", &aAddr);
+
+            if (aAddr == 0 && *cleanAddress != '0') {
+                // look for a symbol match since it's not a number
+                bool symbolFound = false;
+                for (int x = 0; x < asmSymbolCount; x++) {
+                    ASMSYMBOL record = asmSymbols[x];
+                    if (strcmp(cleanAddress, record.SymbolName) == 0)
+                    {
+                        aAddr = record.Address;
+                        symbolFound = true;
+                        break;
+                    }
                 }
-            }
-            
-            if (!symbolFound) {
-                char *registerTranslated = str_replace(cleanAddress, "R", "");
-                sscanf(registerTranslated, "%d", &aAddr);
-                free(registerTranslated);registerTranslated = NULL;
+                // create symbol entry if it doesn't exist
+                if (!symbolFound) {
+                    aAddr = variableMemoryAddress;
+                    strcpy(asmSymbols[asmSymbolCount].SymbolName, cleanAddress);
+                    asmSymbols[asmSymbolCount].Address = aAddr;
+                    variableMemoryAddress++;
+                    asmSymbolCount++;
+                }
             }
             
             char *aInstruct = toBinaryString(aAddr, 16);
